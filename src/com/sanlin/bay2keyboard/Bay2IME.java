@@ -196,9 +196,9 @@ public class Bay2IME extends InputMethodService implements
 			if (mComposing.length() > 0) {
 				ArrayList<String> list = new ArrayList<String>();
 				list.add(mComposing.toString());
+				list.add("suggestion1");
 				list.add("suggestion2");
 				list.add("suggestion3");
-				list.add("suggestion4");
 				setSuggestions(list, true, true);
 			} else {
 				setSuggestions(null, false, false);
