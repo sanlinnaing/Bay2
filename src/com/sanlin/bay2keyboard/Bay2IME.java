@@ -29,6 +29,7 @@ public class Bay2IME extends InputMethodService implements
 	private boolean mPredictionOn;
 	private CandidateView mCandidateView;
 	private CompletionInfo[] mCompletions;
+	private List<String> mSuggestions;
 	private static long mLastShiftTime = 0;
 	private static long mLastKeyTime = 0;
 	private static boolean doubleTapped=false;
@@ -60,6 +61,7 @@ public class Bay2IME extends InputMethodService implements
 			+ cons + "\u103A(\u103B)?)*";
 	Pattern wSegmentPtn = Pattern.compile(wordSegmentPattern);
 
+	private WordsDataSource datasource;
 	//
 
 	@Override
@@ -68,6 +70,8 @@ public class Bay2IME extends InputMethodService implements
 		super.onCreate();
 		mInputMethod = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
 		mWordSeparators = getResources().getString(R.string.word_separators);
+		datasource = new WordsDataSource(this);
+	    datasource.open();
 
 	}
 
@@ -180,6 +184,7 @@ public class Bay2IME extends InputMethodService implements
 
 	@Override
 	public View onCreateCandidatesView() {
+		Log.d("onCreateCandidatesView","onCreateCandidatesView");
 		mCandidateView = new CandidateView(this);
 		mCandidateView.setService(this);
 		return mCandidateView;
@@ -192,13 +197,10 @@ public class Bay2IME extends InputMethodService implements
 	private void updateCandidates() {
 		Log.d("updateCandidates", "list update");
 
-		if (!mCompletionOn) {
+		if (mPredictionOn) {
 			if (mComposing.length() > 0) {
-				ArrayList<String> list = new ArrayList<String>();
-				list.add(mComposing.toString());
-				list.add("suggestion1");
-				list.add("suggestion2");
-				list.add("suggestion3");
+				List<String> list = new ArrayList<String>();
+				list=datasource.getSuggestedWords(mComposing.toString());
 				setSuggestions(list, true, true);
 			} else {
 				setSuggestions(null, false, false);
@@ -216,6 +218,7 @@ public class Bay2IME extends InputMethodService implements
 		if (mCandidateView != null) {
 			mCandidateView.setSuggestions(suggestions, completions,
 					typedWordValid);
+			mSuggestions=suggestions;
 		}
 	}
 
@@ -228,18 +231,19 @@ public class Bay2IME extends InputMethodService implements
 			int candidatesEnd) {
 		super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd,
 				candidatesStart, candidatesEnd);
-
+		Log.d("onUpdateSelection","onUpdateSelection");
 		// If the current selection in the text view changes, we should
 		// clear whatever candidate text we have.
-		if (mComposing.length() > 0
-				&& (newSelStart != candidatesEnd || newSelEnd != candidatesEnd)) {
-			mComposing.clear();
-			updateCandidates();
-			InputConnection ic = getCurrentInputConnection();
-			if (ic != null) {
-				ic.finishComposingText();
-			}
-		}
+//		if (mComposing.length() > 0
+//				&& (newSelStart != candidatesEnd || newSelEnd != candidatesEnd)) {
+//			Log.d("onUpdateSelection","conditions = true");
+//			mComposing.clear();
+//			updateCandidates();
+//			InputConnection ic = getCurrentInputConnection();
+//			if (ic != null) {
+//				ic.finishComposingText();
+//			}
+//		}
 	}
 
 	/**
@@ -250,9 +254,11 @@ public class Bay2IME extends InputMethodService implements
 	 */
 	@Override
 	public void onDisplayCompletions(CompletionInfo[] completions) {
+		Log.d("onDisplayCompletions","onDisplayCompletions");
 		if (mCompletionOn) {
 			mCompletions = completions;
 			if (completions == null) {
+				Log.d("onDisplayCompletions","completions null");
 				setSuggestions(null, false, false);
 				return;
 			}
@@ -312,6 +318,7 @@ public class Bay2IME extends InputMethodService implements
 	 * Helper function to commit any text being composed in to the editor.
 	 */
 	private void commitTyped(InputConnection inputConnection) {
+		Log.d("commitTyped","commit");
 		if (mComposing.length() > 0) {
 			mComposing.clearSpans();
 			inputConnection.commitText(mComposing, mComposing.length());
@@ -322,7 +329,7 @@ public class Bay2IME extends InputMethodService implements
 	}
 
 	private void setSpannable() {
-		mComposing.setSpan(new BackgroundColorSpan(0x65000000), 0,
+		mComposing.setSpan(new BackgroundColorSpan(0x65ff0000), 0,
 				mComposing.length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
 		mComposing.setSpan(new ForegroundColorSpan(0xffffffff), 0,
 				mComposing.length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
@@ -546,10 +553,13 @@ public class Bay2IME extends InputMethodService implements
 	}
 
 	public void pickSuggestionManually(int index) {
-		if (mCompletionOn && mCompletions != null && index >= 0
-				&& index < mCompletions.length) {
-			CompletionInfo ci = mCompletions[index];
-			getCurrentInputConnection().commitCompletion(ci);
+		Log.d("suggestManually","Manually Suggest "+index);
+		if (mPredictionOn && mSuggestions != null && index >= 0
+				&& index < mSuggestions.size()) {
+			//CompletionInfo ci = mCompletions[index];
+			//getCurrentInputConnection().commitCompletion(ci);
+			getCurrentInputConnection().commitText(mSuggestions.get(index), 1);
+			mComposing.clear();
 			if (mCandidateView != null) {
 				mCandidateView.clear();
 			}
