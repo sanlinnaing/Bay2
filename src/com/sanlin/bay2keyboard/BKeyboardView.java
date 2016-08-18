@@ -1,7 +1,6 @@
 package com.sanlin.bay2keyboard;
 
 import android.content.Context;
-import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
 import android.inputmethodservice.Keyboard.Key;
 import android.util.AttributeSet;
